@@ -20,7 +20,7 @@ Note: More firewalls/traffic will require more RAM and CPU. Please adjust the Va
 
 Download the repository via 
 
-`git clone https://github.com/CSPF-Founder/shieldsup`
+`git clone https://github.com/CSPF-Founder/shieldsup.git`
 
 Or you can download it as a zip file by clicking on `Code` in the top right and clicking `Download zip`.
 

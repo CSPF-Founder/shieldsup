@@ -27,6 +27,7 @@ sudo make
 
 
 randomapikey=`(sudo head /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 40)`
+cp /app/build/scanner/env.example /app/build/scanner/.env
 sed -i "s/\[ROOT_PASS_TO_REPLACE\]/$rootpass/g" /app/build/scanner/.env
 sed -i "s/\[REPLACE_API_KEY\]/$randomapikey/g" /app/build/scanner/.env
 
@@ -37,8 +38,11 @@ mkdir -p /app/shieldsup/reporter/config
 sed -i "s/\[ROOT_PASS_TO_REPLACE\]/$rootpass/g" /app/shieldsup/reporter/config/app.conf
 
 #Edit scanner api config
+cp /app/build/scanner-api/env.example /app/build/scanner-api/.env
+
 sed -i "s/\[REPLACE_API_KEY\]/$randomapikey/g" /app/build/scanner-api/.env
 #Edit manager config
+cp /app/build/manager/env.example /app/build/manager/.env
 sed -i "s/\[ROOT_PASS_TO_REPLACE\]/$rootpass/g" /app/build/manager/.env
 #chown back
 
