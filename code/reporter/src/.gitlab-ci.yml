@@ -1,0 +1,31 @@
+stages:
+  - linting
+
+ruff:
+  stage: linting
+  image: registry.gitlab.com/pipeline-components/ruff:latest
+  tags:
+    - python-linting
+  script:
+    - ruff --format=gitlab .
+
+pyright:
+  stage: linting
+  image: python:3.11.3-slim-bullseye
+  # image: fastapi-pyright-ci:3.11
+  tags:
+    - python-linting
+  before_script:
+    - apt-get update -y && apt install curl -y
+    - curl -sL https://deb.nodesource.com/setup_18.x | bash
+    - apt-get install nodejs -yq
+    - npm i -g pyright
+    - pip install poetry
+    - poetry config virtualenvs.create false && poetry install --no-root --no-dev --no-interaction --no-ansi
+  script:
+    - pyright --outputjson 
+  artifacts:
+    paths:
+      - report.json
+    reports:
+      codequality: report.json

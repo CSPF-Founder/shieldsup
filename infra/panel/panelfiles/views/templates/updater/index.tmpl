@@ -1,0 +1,45 @@
+{{define "body"}}
+<div class="row">
+    <div class="col-lg-5 col-sm-10 col-12 ">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-black ">
+                <div class="row">
+                    <div class="col-lg-10">
+                        <h5>Feed Status</h5>
+                    </div>
+                    <div class="col-lg-2">
+                        <button type="submit" id="update-button" class="btn btn-sm btn-primary">Update</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <p id="update-status">
+                    Update Status:
+                    <span class="ms-2 px-2 {{.Data.ColorStatus}}">
+                        {{if eq .Data.Status ""}}
+                        --
+                        {{else}}
+                        {{.Data.Status}}
+                        {{end}}
+                    </span>
+
+                </p>
+                <p id="last-updated">Last Updated: <span class="ms-2">{{.Data.LastUpdate}}</span></p>
+            </div>
+
+        </div>
+    </div>
+</div>
+{{end}}
+{{define "scripts"}}
+<script type="module" src='{{assetPath "app/updater.js"}}'></script>
+
+{{ if .Data.Updating }}
+<script>
+    $(document).ready(function () {
+        // call checkstatus every 5 seconds
+        updateStatusInterval = setInterval(checkStatus, STATUS_CHECK_INTERVAL);
+    });
+</script>
+{{end}}
+{{end}}

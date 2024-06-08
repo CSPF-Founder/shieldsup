@@ -1,0 +1,134 @@
+{{define "body"}}
+<div class="row pt-3">
+    <div class="col-lg-12 col-sm-12 pb-3 fpt14">
+        <h3 class="font-weight-bold">{{.Title}}</h3>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header text-center">
+        <h5> BugTrack Details</h5>
+        <hr>
+    </div>
+    <div class="card-body">
+        <form id="update-bugtrack-form" method="POST" autocomplete="off" enctype="multipart/form-data">
+            <input type="hidden" id="bug-id" name="id" value="{{.Data.Data.ID}}" />
+            <div class="row">
+                <div class="col-lg-2"></div>
+                <div class="col-lg-8 col-sm-12">
+                    <div class="form-group p-2" id="dullinput">
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">URL/IP/Application</span>
+                            <input class="form-control read-only-field" style="background-color: #c9c9c9 !important;"
+                                readonly type="text" id="target" value="{{.Data.Data.Target}}" placeholder="Target" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Alert Title</span>
+                            <input class="form-control " type="text" id="alert_title" value="{{.Data.Data.AlertTitle}}"
+                                placeholder="Alert Title" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Severity</span>
+                            <select class="form-control form-select" id="severity" name="severity">
+                                {{range $key, $value := .Data.BugTrackSeverity}}
+                                <option value="{{$key}}" {{if eq $.Data.Data.Severity $key}} selected {{end}}>
+                                    {{$value}}
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Details/Impact</span>
+                            <textarea class="form-control" name="details" id="details"
+                                placeholder="Details">{{.Data.Data.Details}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Replication/Proof</span>
+                            <textarea class="form-control " name="poc" rows="4" id="poc"
+                                placeholder="Replication/Proof">{{.Data.Data.Poc}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Remediation</span>
+                            <textarea class="form-control " rows="4" name="remediation" id="remediation"
+                                placeholder="Remediation">{{.Data.Data.Remediation}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Found Date</span>
+                            <input class="form-control read-only-field" style="background-color: #c9c9c9 !important;"
+                                readonly type="text" id="found_date" name="found_date"
+                                value="{{.Data.Data.FormatedFoundDate}}" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Revalidated Date</span>
+                            <input class="form-control read-only-field" style="background-color: #c9c9c9 !important;"
+                                readonly type="text" id="revalidated_date" name="revalidated_date"
+                                value="{{.Data.Data.FormatedRevalidatedDate}}" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Prioritization</span>
+                            <select class="form-control form-select" id="prioritization" name="prioritization">
+                                {{range $key, $value := .Data.PrioritizationStatus}}
+                                <option value="{{$key}}" {{ if eq $.Data.Data.Prioritization $key}} selected {{end}}>
+                                    {{$value}}
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">To Be Fixed By</span>
+                            <input class="form-control" type="text" name="to_be_fixed_by" id="to_be_fixed_by"
+                                value="{{.Data.Data.ToBeFixedBy}}"
+                                placeholder="To Be Fixed By (Should be filled by Customer)" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Status</span>
+                            <select class="form-control form-select" id="status" name="status">
+                                {{range $key, $value := .Data.BugTrackStatus}}
+                                <option value="{{$key}}" {{if eq $.Data.Data.Status $key}} selected {{end}}>
+                                    {{$value}}
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            {{if .Data.Data.Remarks}}
+                            <span style="width: 20%;" class="input-group-text">Remarks History</span>
+                            <textarea class="form-control read-only-field" style="background-color: #c9c9c9 !important;"
+                                readonly id="remarks_history"
+                                placeholder="Remarks history">{{.Data.Data.Remarks}}</textarea>
+                            {{end}}
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Add Remarks</span>
+                            <textarea class="form-control" id="new_remarks" name="new_remarks"
+                                placeholder="Add New Remarks"></textarea>
+                        </div>
+
+                        <div class="input-group mt-3">
+                            <button type="button" id="update-bugtrack"
+                                class="update-button btn btn-primary"><b>Update</b></button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+{{define "scripts"}}
+<script type="module" src='{{assetPath "app/bug_track.js"}}'></script>
+{{end}}

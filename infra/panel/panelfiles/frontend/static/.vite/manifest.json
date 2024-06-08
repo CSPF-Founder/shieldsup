@@ -1,0 +1,83 @@
+{
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-brands-400.ttf": {
+    "file": "assets/fa-brands-400-DtZKBM2a.ttf",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-brands-400.ttf"
+  },
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-brands-400.woff2": {
+    "file": "assets/fa-brands-400-C99Yv4gD.woff2",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-brands-400.woff2"
+  },
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-regular-400.ttf": {
+    "file": "assets/fa-regular-400-BMFokQJ2.ttf",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-regular-400.ttf"
+  },
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-regular-400.woff2": {
+    "file": "assets/fa-regular-400-OOsPf1xj.woff2",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-regular-400.woff2"
+  },
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.ttf": {
+    "file": "assets/fa-solid-900-DM0teJdg.ttf",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.ttf"
+  },
+  "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2": {
+    "file": "assets/fa-solid-900-DAI24fNt.woff2",
+    "src": "../node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2"
+  },
+  "_responsive.bootstrap4-4LtFXkcp.js": {
+    "file": "assets/responsive.bootstrap4-4LtFXkcp.js",
+    "name": "responsive.bootstrap4",
+    "imports": [
+      "app/main.js"
+    ]
+  },
+  "app/bug_track.js": {
+    "file": "assets/bug_track-C0wNnhnd.js",
+    "name": "bug_track",
+    "src": "app/bug_track.js",
+    "isEntry": true,
+    "imports": [
+      "app/main.js",
+      "_responsive.bootstrap4-4LtFXkcp.js"
+    ]
+  },
+  "app/main.js": {
+    "file": "assets/main-BCf5cIOF.js",
+    "name": "main",
+    "src": "app/main.js",
+    "isEntry": true
+  },
+  "app/scan_result.js": {
+    "file": "assets/scan_result-DNu-z-Xm.js",
+    "name": "scan_result",
+    "src": "app/scan_result.js",
+    "isEntry": true,
+    "imports": [
+      "app/main.js",
+      "_responsive.bootstrap4-4LtFXkcp.js"
+    ]
+  },
+  "app/scans.js": {
+    "file": "assets/scans-CiDUqrFW.js",
+    "name": "scans",
+    "src": "app/scans.js",
+    "isEntry": true,
+    "imports": [
+      "app/main.js",
+      "_responsive.bootstrap4-4LtFXkcp.js"
+    ]
+  },
+  "app/updater.js": {
+    "file": "assets/update-BkNVRyz1.js",
+    "name": "update",
+    "src": "app/updater.js",
+    "isEntry": true,
+    "imports": [
+      "app/main.js"
+    ]
+  },
+  "scss/app.scss": {
+    "file": "assets/app-CbK77dZy.css",
+    "src": "scss/app.scss",
+    "isEntry": true
+  }
+}

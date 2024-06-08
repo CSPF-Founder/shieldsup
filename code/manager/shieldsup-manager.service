@@ -1,0 +1,13 @@
+[Unit]
+Description=ShieldsUp Manager
+After=network.target remote-fs.target docker.service
+
+[Service]
+User=vagrant
+Group=vagrant
+WorkingDirectory=/app/shieldsup/manager
+ExecStart=/app/shieldsup/manager/manager
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

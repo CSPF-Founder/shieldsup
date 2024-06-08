@@ -1,0 +1,387 @@
+{{define "body"}}
+<style>
+    @media (max-width: 767.98px) {
+        .chart-container {
+            width: 300px;
+            margin: auto;
+        }
+
+    }
+
+    .chart-container {
+        width: 85%;
+        margin: auto;
+    }
+</style>
+
+<style>
+    .card-header .title {
+        font-size: 17px;
+        color: #000;
+    }
+
+    .card-header .accicon {
+        float: right;
+        font-size: 20px;
+        width: 1.2em;
+    }
+
+    .card-header {
+        cursor: pointer;
+        border-bottom: none;
+    }
+
+    .card {
+        border: 1px solid #ddd;
+    }
+
+    .card-header:not(.collapsed) .rotate-icon {
+        transform: rotate(180deg);
+    }
+
+    .small-font {
+        font-size: 0.8rem
+    }
+
+    .non-editable-text-area {
+        border: none;
+        background-color: transparent;
+        resize: none;
+        width: 100%;
+        outline: none;
+    }
+</style>
+
+
+<input type="hidden" id="no_vulnerabilities" value="{{.Data.VulnerabilityStats.NoVulnerabilities}}">
+<input type="hidden" id="overall_cvss_score" value="{{.Data.OverallCVSSScore}}">
+<div class="row mb-3 mx-auto" id="dashboard-chart-box1">
+    <div class="col-lg-3 col-md-6 mx-auto">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="mb-2">CVSS Score</h5>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cvss-score-gauge"></canvas>
+                </div>
+                <div class="mt-3 mx-auto text-center">
+                    <span>Over all CVSS score: {{.Data.OverallCVSSScore}}</span>
+                </div>
+                <div class="mt-3">
+                    <span>CVSS Range Reference:</span>
+                    <div class="row small-font">
+                        <div class="col-lg-6">Low</div>
+                        <div class="col-lg-6 text-right">0-3.9</div>
+                    </div>
+                    <div class="row small-font">
+                        <div class="col-lg-6">Medium</div>
+                        <div class="col-lg-6 text-right">4.0-6.9</div>
+                    </div>
+                    <div class="row small-font">
+                        <div class="col-lg-6">High</div>
+                        <div class="col-lg-6 text-right">7.0-8.9</div>
+                    </div>
+                    <div class="row small-font">
+                        <div class="col-lg-6">Critical</div>
+                        <div class="col-lg-6 text-right">9.0-10.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 col-md-6 mx-auto">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="mb-2">Scan Details</h5>
+                    </div>
+                </div>
+
+                <div class="mt-5 h6">
+                    <div class="row mt-3">
+                        <div class="col-lg-4">Target</div>
+                        <div class="col-lg-8 text-right text-disabled">
+                            {{.Data.Target.TargetAddress}}
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-lg-4">Scan Started Time</div>
+                        <div class="col-lg-8 text-right text-disabled">
+                            {{if .Data.Target.ScanStartedTime}}
+                            {{formatDate .Data.Target.ScanStartedTime "2 Jan 06 03:04:05 PM"}}
+                            {{else}}
+                            --
+                            {{end}}
+                        </div>
+                    </div>
+                    <div class="row mt-3 pb-4 border-bottom">
+                        <div class="col-lg-4">Scan Completed Time</div>
+                        <div class="col-lg-8 text-right text-disabled">
+                            {{if .Data.Target.ScanCompletedTime}}
+                            {{formatDate .Data.Target.ScanCompletedTime "2 Jan 06 03:04:05 PM"}}
+                            {{else}}
+                            --
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3 border-bottom">
+                    <div class="col-6">
+                        <div class="border-start border-start-4 border-start-danger px-3 mb-3"><small
+                                class="text-disabled">Total Alerts</small>
+                            <div class="fs-5 fw-semibold">
+                                {{.Data.TotalAlerts}}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /.col-->
+                    <div class="col-6">
+                        <div class="border-start border-start-4 border-start-info px-3 mb-3"><small
+                                class="text-disabled">Total Targets</small>
+                            <div class="fs-5 fw-semibold">
+                                {{.Data.TotalTargets}}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /.col-->
+
+                </div>
+                <!-- /.row-->
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mx-auto">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="mb-2">Vulnerabilities count</h5>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="alerts-distro-chart"></canvas>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row pt-3 p-4">
+    {{if .Data.Records}}
+    <div class="mx-2 mb-2">
+        <span><b>Note:</b> Click the alert title to view the details</span>
+    </div>
+    {{end}}
+
+    {{if .Data.Records}}
+    {{range $ip, $scanResults := .Data.Records}}
+    <div class="card mx-auto col-lg-12  mb-3">
+        <div class="card-header bg-light text-dark">
+            <span class=""><b>IP: {{$ip}}</b></span>
+        </div>
+        <div class="card-body">
+            <span class="text-left">
+                <b>CVSS Score for this target:</b>
+                {{if $.Data.CVSSScoreByHost}}
+                {{index $.Data.CVSSScoreByHost $ip}}
+                {{else}}
+                0.0
+                {{end}}
+                </b>
+            </span>
+            <div class="card p-2 mt-3">
+                <div class="accordion col-lg-12">
+                    {{range $scanResult := $scanResults}}
+                    <div class="mt-1">
+                        <div title="View Details"
+                            class="card-header collapsed {{BgClassBySeverity $scanResult.Severity}}"
+                            data-toggle="collapse" data-coreui-toggle="collapse"
+                            data-coreui-target="#collapse_{{HexID $scanResult.ID}}" aria-expanded="true"
+                            aria-controls="collapseExample">
+                            <span class=""><b>{{$scanResult.VulnerabilityTitle}}</b></span>
+                            <span class="accicon"><i class="fa fa-angle-down rotate-icon"></i></span>
+                        </div>
+                        <div id="collapse_{{HexID $scanResult.ID}}" data-id="collapse_{{HexID $scanResult.ID}}"
+                            class="collapse">
+                            <div class="card-header">
+                                <form action="/bug-track/add-from-scanresult" method="GET" class="add-to-bugtrack">
+                                    <input type="hidden" name="target_id" value="{{HexID $scanResult.TargetID}}">
+                                    <input type="hidden" name="alert_id" value="{{HexID $scanResult.ID}}">
+                                    <button type="submit" class="btn btn-sm btn-primary">Add To BugTrack</button>
+                                    <input class="" type="checkbox" name="group_by_alert" value="1">
+                                    <label class="" for="group_by_alert">
+                                        Group similar vulnerabilities
+                                    </label>
+                                </form>
+                            </div>
+
+                            <div class="mt-2">
+                                <div class="">
+                                    <div class="border-bottom">
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Vulnerability Description
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{if $scanResult.VulnerabilityDescription}}
+                                                <textarea class="non-editable-text-area"
+                                                    rows="{{CalculateTextAreaRow $scanResult.VulnerabilityDescription}}"
+                                                    readonly>{{$scanResult.VulnerabilityDescription}}</textarea>
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Severity
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{Severity $scanResult.Severity}}
+                                            </div>
+                                        </div>
+                                        {{if $scanResult.Evidence}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Evidence
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.Evidence}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if $scanResult.MatchedAt}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Evidence Found At
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.MatchedAt}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if $scanResult.Host}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Host
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.Host}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if $scanResult.Classification}}
+                                        {{if $scanResult.Classification.CVSSScore}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                CVSS Score
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.Classification.CVSSScore}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if .Classification.CVSSMetrics}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                CVSS Metrics
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.Classification.CVSSMetrics}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if $scanResult.Classification.CVEID}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                CVE
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{ConvertJSONToString $scanResult.Classification.CVEID}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{if $scanResult.Classification.CWEID}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                CVE
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{ConvertJSONToString $scanResult.Classification.CWEID}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        {{end}}
+                                        {{if $scanResult.CURLCommand}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Curl Command
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{$scanResult.CURLCommand}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                Remediation
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                {{if $scanResult.Remediation}}
+                                                <textarea class="non-editable-text-area"
+                                                    rows="{{CalculateTextAreaRow $scanResult.Remediation}}"
+                                                    readonly>{{$scanResult.Remediation}}</textarea>
+                                                {{else}}
+                                                <textarea class="non-editable-text-area"
+                                                    rows="{{$.Data.NumberOfTARowsForDefaultRemediation}}"
+                                                    readonly>{{$.Data.DefaultRemediation}}</textarea>
+                                                {{end}}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                        {{if $scanResult.Reference}}
+                                        <div class="row border-bottom mb-3">
+                                            <div class="col col-lg-3">
+                                                References
+                                            </div>
+                                            <div class="col col-lg-9">
+                                                <ul>
+                                                    {{range $i, $v := $scanResult.Reference}}
+                                                    <li>{{$v}}</li>
+                                                    {{end}}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+    {{end}}
+</div>
+{{end}}
+{{define "scripts"}}
+
+<script>
+    let alert_chart_data = [
+        parseInt("{{.Data.VulnerabilityStats.Critical}}"),
+        parseInt("{{.Data.VulnerabilityStats.High}}"),
+        parseInt("{{.Data.VulnerabilityStats.Medium}}"),
+        parseInt("{{.Data.VulnerabilityStats.Low}}"),
+        parseInt("{{.Data.VulnerabilityStats.Info}}")
+    ];
+</script>
+<script type="module" src='{{assetPath "app/scan_result.js"}}'></script>
+{{end}}

@@ -1,0 +1,67 @@
+services:
+  mariadb:
+    image: mariadb:10.11.3
+    container_name: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: "[ROOT_PASS_TO_REPLACE]"
+      MARIADB_USER: "shieldsup"
+      MARIADB_PASSWORD: "[PASSWORD_TO_REPLACE]"
+      MARIADB_DATABASE: "shieldsup_db"
+    volumes:
+      - ./volumes/db/mariadb:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:7.0.9
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "root"
+      MONGO_INITDB_ROOT_PASSWORD: "[ROOT_PASS_TO_REPLACE]"
+
+    volumes:
+      - ./volumes/db/mongodb:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+
+  panel:
+    build:
+      context: panelfiles
+    depends_on:
+      - mariadb
+      - mongodb
+    restart: always
+    environment:
+      DATABASE_URI: shieldsup:[PASSWORD_TO_REPLACE]@(mariadb:3306)/shieldsup_db?charset=utf8&parseTime=True&loc=Local
+      COPYRIGHT_FOOTER_COMPANY:  Cyber Security and Privacy Foundation 
+
+      PRODUCT_TITLE: Shieldsup Scanner
+      USE_DOTENV: "false"
+      SERVER_ADDRESS: 0.0.0.0:443
+      DBMS_TYPE: mysql
+      WORK_DIR: /app/data/work_dir/
+      # The temp_uploads should be in the same device as the WORK_DIR(or docker gives invalid-cross)
+      TEMP_UPLOADS_DIR: /app/data/temp_uploads/
+      MIGRATIONS_PREFIX: db
+      #Log config: debug, info, warn, error, fatal, panic
+      LOG_LEVEL: info
+      # TLS configuration
+      USE_TLS: "true"
+      CERT_PATH: /app/panel/certs/panel.crt
+      KEY_PATH: /app/panel/certs/panel.key
+
+      MONGO_DATABASE_URI: "mongodb://root:[ROOT_PASS_TO_REPLACE]@mongodb:27017/shieldsup_data?authSource=admin&authMechanism=SCRAM-SHA-256"
+      MONGO_DATABASE_NAME: shieldsup_data
+
+      SHIELDSUP_REPORT_DIR: /app/data/reports/
+      
+    user: "1000" # UPDATE accordingly -  host user id of `shieldsup`
+    volumes:
+      - /app/shieldsup/data/:/app/data/
+      - /app/shieldsup/panel/certs/:/app/panel/certs/
+      - /app/shieldsup/panel/frontend/external/:/app/panel/frontend/external/
+
+    ports:
+      - "443:443"

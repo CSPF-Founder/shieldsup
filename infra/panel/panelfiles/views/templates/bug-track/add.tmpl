@@ -1,0 +1,127 @@
+{{define "body"}}
+<input type="hidden" id="today_date" value="{{formatNormalDate .Data.TodayDate "2006-01-02"}}">
+<div class="row pt-3">
+    <div class="col-lg-12 col-sm-12 pb-3 fpt14">
+        <h3 class="font-weight-bold">BugTrack</h3>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header text-center">
+        <h5> Add BugTrack</h5>
+        <hr>
+    </div>
+    <div class="card-body">
+        <form id="add-bugtrack-form" method="POST" autocomplete="off" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-lg-2"></div>
+                <div class="col-lg-8 col-sm-12">
+                    <div class="form-group p-2" id="dullinput">
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">URL/IP/Application</span>
+                            <input class="form-control" type="text" id="target" name="target" 
+                            value="{{if .Data.Target}} {{.Data.Target}} {{end}}" placeholder="Url/IP/Application" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Alert Title</span>
+                            <input class="form-control" type="text" id="alert_title" name="alert_title" value="{{if .Data.AlertTitle}} {{.Data.AlertTitle}} {{end}}" placeholder="Alert Title" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Severity</span>
+                            <select class="form-control form-select" id="severity" name="severity">
+                                {{range $key, $value := .Data.BugTrackSeverity}}
+                                    <option value="{{$key}}" {{if eq $.Data.Severity $key}} selected {{end}}>
+                                        {{$value}}
+                                    </option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Details/Impact</span>
+                            <textarea class="form-control" id="details" name="details" rows="5"
+                                placeholder="Details/Impact">{{if .Data.Details}} {{.Data.Details}} {{end}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Replication/Proof</span>
+                            <textarea class="form-control" id="poc" name="poc" rows="4"
+                                placeholder="Replication/Proof">{{if .Data.Poc}} {{.Data.Poc}} {{end}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Remediation</span>
+                            <textarea class="form-control" id="remediation" rows="4" name="remediation"
+                                placeholder="Remediation">{{if .Data.Remediation}} {{.Data.Remediation}} {{end}}</textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Remarks</span>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="2"
+                                placeholder="Remarks"></textarea>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Found Date</span>
+                            <input class="form-control datepicker" type="text" id="found_date" name="found_date"
+                                value="{{formatNormalDate .Data.TodayDate "2006-01-02"}}" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Revalidated Date</span>
+                            <input class="form-control Datepicker" type="text" id="revalidated_date"
+                                name="revalidated_date"
+                                value="{{formatNormalDate .Data.TodayDate "2006-01-02"}}" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Prioritization</span>
+                            <select class="form-control form-select" id="prioritization" name="prioritization">
+                                {{range $key, $value := .Data.PrioritizationStatus}}
+                                    {{if or (and (or (eq $.Data.Severity 1) (eq $.Data.Severity 2)) (eq $key 3)) (and (eq $.Data.Severity 3) (eq $key 2)) (and (eq $.Data.Severity 4) (eq $key 1))}}
+                                        <option value="{{$key}}" selected>
+                                            {{$value}}
+                                        </option>
+                                    {{else}}
+                                        <option value="{{$key}}">
+                                            {{$value}}
+                                        </option>
+                                    {{end}}
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">To Be Fixed By</span>
+                            <input class="form-control" type="text" name="to_be_fixed_by" id="to_be_fixed_by"
+                                value=""
+                                placeholder="To Be Fixed By (Optional)" />
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <span style="width: 20%;" class="input-group-text">Status</span>
+                            <select class="form-control" id="status" name="status">
+                                {{range $key, $value := .Data.BugTrackStatus}}
+                                <option value="{{$key}}">
+                                    {{$value}}
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="input-group mt-3">
+                            <button type="submit" class="checkout-button btn btn-primary center"><b>Add</b></button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
+{{define "scripts"}}
+<script type="module" src='{{assetPath "app/bug_track.js"}}'></script>
+{{end}}

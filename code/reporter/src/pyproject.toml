@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "shieldsup-scanner"
+version = "0.1.0"
+description = ""
+authors = ["Cyber Security & Privacy Foundation"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pymongo = "^4.5.0"
+python-docx = "^0.8.11"
+pydantic = "^2.3.0"
+matplotlib = "^3.8.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

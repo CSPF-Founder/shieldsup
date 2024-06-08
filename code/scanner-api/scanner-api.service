@@ -1,0 +1,13 @@
+[Unit]
+Description=ShieldsUp Scanner API
+After=network.target remote-fs.target docker.service
+
+[Service]
+User=vagrant
+Group=vagrant
+WorkingDirectory=/app/shieldsup/scanner_api
+ExecStart=/app/shieldsup/scanner_api/api
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
