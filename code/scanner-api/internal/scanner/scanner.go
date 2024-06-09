@@ -1,13 +1,16 @@
 package scanner
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,16 +25,18 @@ import (
 )
 
 type ScannerModule struct {
-	Logger         *logger.Logger
-	Config         *config.Config
-	TargetAddress  string
-	TemplateFolder string
-	DockerName     string
-	FileNameHash   string
-	OutputDir      string
-	TempStateFile  string
-	OutputFileName string
-	OutputFile     string
+	Logger          *logger.Logger
+	Config          *config.Config
+	TargetAddress   string
+	TemplateFolder  string
+	DockerName      string
+	FileNameHash    string
+	OutputDir       string
+	TempStateFile   string
+	OutputFileName  string
+	TargetsFile     string
+	TargetsFileName string
+	OutputFile      string
 }
 
 func NewScannerModule(conf *config.Config, logger *logger.Logger, target string) *ScannerModule {
@@ -44,22 +49,27 @@ func NewScannerModule(conf *config.Config, logger *logger.Logger, target string)
 	outputFileName := fileNameHash + ".json"
 	outputFile := filepath.Join(outputDir, outputFileName)
 
+	targetsFileName := fileNameHash + ".text"
+	targetsFile := filepath.Join(outputDir, targetsFileName)
+
 	fileCreateErr := os.MkdirAll(filepath.Dir(outputFile), 0755)
 	if fileCreateErr != nil {
 		logger.Error("Error creating directory:", fileCreateErr)
 	}
 
 	return &ScannerModule{
-		Logger:         logger,
-		TargetAddress:  target,
-		TemplateFolder: conf.TemplateFolder,
-		DockerName:     conf.DockerName,
-		FileNameHash:   fileNameHash,
-		OutputDir:      outputDir,
-		TempStateFile:  tempStateFile,
-		OutputFileName: outputFileName,
-		OutputFile:     outputFile,
-		Config:         conf,
+		Logger:          logger,
+		TargetAddress:   target,
+		TemplateFolder:  conf.TemplateFolder,
+		DockerName:      conf.DockerName,
+		FileNameHash:    fileNameHash,
+		OutputDir:       outputDir,
+		TempStateFile:   tempStateFile,
+		OutputFileName:  outputFileName,
+		OutputFile:      outputFile,
+		TargetsFileName: targetsFileName,
+		TargetsFile:     targetsFile,
+		Config:          conf,
 	}
 }
 
@@ -189,6 +199,36 @@ func getNanoCPUForContainer() int64 {
 	return int64(halfCPU) * 1e9
 }
 
+func (s *ScannerModule) runPortScanner(ctx context.Context) error {
+	ipCount, _ := iputils.GetIPCountIfRange(s.TargetAddress)
+	portScanTimeout := 60 * time.Second
+	if ipCount > 1 {
+		portScanTimeout = time.Duration(ipCount) * portScanTimeout
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, portScanTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "naabu", "-host", s.TargetAddress, "-silent", "-o", s.TargetsFile)
+
+	var stdOut bytes.Buffer
+	var stdErr bytes.Buffer
+	cmd.Stdout = &stdOut
+	cmd.Stderr = &stdErr
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Error in Naabu: %w", err)
+	}
+
+	if stdOut.String() == "" {
+		return fmt.Errorf("No ports found by Naabu")
+	}
+
+	return nil
+
+}
+
 func (s *ScannerModule) StartScan() {
 	scanCompleted := false
 	defer func() {
@@ -214,10 +254,26 @@ func (s *ScannerModule) StartScan() {
 		return
 	}
 	containerCPU := getNanoCPUForContainer()
+	nInputType := "file"
+	if strings.Contains(s.TargetAddress, "https://") || strings.Contains(s.TargetAddress, "http://") {
+		nInputType = "argument"
+	}
+
+	if nInputType == "file" {
+		err := s.runPortScanner(ctx)
+		if err != nil {
+			s.Logger.Error("Error running port scanner", err)
+			nInputType = "argument"
+		}
+	}
 
 	config := &container.Config{
 		Image: s.Config.DockerName,
-		Cmd:   []string{"-u=" + s.TargetAddress, "-o=/nucout/" + s.OutputFileName, "-j"},
+		Cmd:   []string{"-l", "/nucout/" + s.TargetsFileName, "-o", "/nucout/" + s.OutputFileName, "-j"},
+	}
+
+	if nInputType == "argument" {
+		config.Cmd = []string{"-u", s.TargetAddress, "-o", "/nucout/" + s.OutputFileName, "-j"}
 	}
 
 	hostConfig := &container.HostConfig{
