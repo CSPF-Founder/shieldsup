@@ -209,7 +209,7 @@ func (s *ScannerModule) runPortScanner(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, portScanTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "naabu", "-host", s.TargetAddress, "-rate", 100, "-silent", "-o", s.TargetsFile)
+	cmd := exec.CommandContext(ctx, "naabu", "-host", s.TargetAddress, "-rate", "100", "-silent", "-o", s.TargetsFile)
 
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
