@@ -1,5 +1,17 @@
 # ShieldsUp Scanner
 
+## About
+
+Shieldsup Scanner is a robust vulnerability scanner with an integrated bug tracker, designed to simplify the process of tracking and fixing vulnerabilities across your systems. By combining the capabilities of the naabu port scanner and the nuclei vulnerability scanner, Shieldsup Scanner offers comprehensive coverage and identifies a broader range of vulnerabilities compared to using nuclei alone.
+
+## Key Features
+
+- **Integrated Bug Tracker:** Easily track and manage vulnerabilities from discovery to resolution.
+- **Naabu Port Scanner:** Efficiently scans ports to identify open ports and services.
+- **Nuclei Vulnerability Scanner:** Detects a wide array of vulnerabilities with nuclei templates.
+- **Comprehensive Scanning:** By combining naabu and nuclei, it targets a broader range of potential vulnerabilities.
+- **Efficient Workflow:** Streamlines the vulnerability management process, saving time and reducing security risks.
+
 ## Prerequisites
 
 1. Install Vagrant from the official site, https://developer.hashicorp.com/vagrant/downloads. 
