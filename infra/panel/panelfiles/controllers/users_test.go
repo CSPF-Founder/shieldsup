@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"https://github.com/CSPF-Founder/shieldsup/onpremise/panel/auth"
-	"https://github.com/CSPF-Founder/shieldsup/onpremise/panel/models"
+	"github.com/CSPF-Founder/shieldsup/onpremise/panel/auth"
+	"github.com/CSPF-Founder/shieldsup/onpremise/panel/models"
 
 	"github.com/PuerkitoBio/goquery"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"https://github.com/CSPF-Founder/shieldsup/onpremise/panel/models"
+	"github.com/CSPF-Founder/shieldsup/onpremise/panel/models"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/PuerkitoBio/goquery"

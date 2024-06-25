@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"https://github.com/CSPF-Founder/shieldsup/onpremise/panel/auth"
+	"github.com/CSPF-Founder/shieldsup/onpremise/panel/auth"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
