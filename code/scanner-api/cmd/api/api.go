@@ -54,12 +54,12 @@ func baseSetup(conf *config.Config, appLogger *logger.Logger) (*controllers.App,
 	// 	}
 	// }
 
-	// if _, err := os.Stat(conf.TempUploadsDir); os.IsNotExist(err) {
-	// 	err = os.MkdirAll(conf.TempUploadsDir, 0755)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if _, err := os.Stat(conf.LocalTmpDir); os.IsNotExist(err) {
+		err = os.MkdirAll(conf.LocalTmpDir, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return app, nil
 }

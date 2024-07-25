@@ -6,11 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -25,52 +25,77 @@ import (
 )
 
 type ScannerModule struct {
-	Logger          *logger.Logger
-	Config          *config.Config
-	TargetAddress   string
-	TemplateFolder  string
-	DockerName      string
-	FileNameHash    string
-	OutputDir       string
-	TempStateFile   string
-	OutputFileName  string
-	TargetsFile     string
-	TargetsFileName string
-	OutputFile      string
+	Logger         *logger.Logger
+	Config         *config.Config
+	TargetAddress  string
+	TemplateFolder string
+	DockerName     string
+	TargetHash     string
+	OutputDir      string
+	targetType     enums.TargetType
 }
 
 func NewScannerModule(conf *config.Config, logger *logger.Logger, target string) *ScannerModule {
-	fileNameHash := fmt.Sprintf("%x", sha256.Sum256([]byte(target)))
-	logger.Info(fmt.Sprintf("Target: %s, Hash: %s", target, fileNameHash))
-	outputDir := conf.LocalTmpDir
+	targetHash := stringToHash(target)
+	logger.Info(fmt.Sprintf("Target: %s, Hash: %s", target, targetHash))
 
-	tempStateFile := filepath.Join(outputDir, fileNameHash+"_temp"+".json")
-
-	outputFileName := fileNameHash + ".json"
-	outputFile := filepath.Join(outputDir, outputFileName)
-
-	targetsFileName := fileNameHash + ".text"
-	targetsFile := filepath.Join(outputDir, targetsFileName)
-
-	fileCreateErr := os.MkdirAll(filepath.Dir(outputFile), 0755)
-	if fileCreateErr != nil {
-		logger.Error("Error creating directory:", fileCreateErr)
-	}
+	// TODO: return error for invalid target
+	targetType := enums.ParseTargetType(target)
 
 	return &ScannerModule{
-		Logger:          logger,
-		TargetAddress:   target,
-		TemplateFolder:  conf.TemplateFolder,
-		DockerName:      conf.DockerName,
-		FileNameHash:    fileNameHash,
-		OutputDir:       outputDir,
-		TempStateFile:   tempStateFile,
-		OutputFileName:  outputFileName,
-		OutputFile:      outputFile,
-		TargetsFileName: targetsFileName,
-		TargetsFile:     targetsFile,
-		Config:          conf,
+		Logger:         logger,
+		TargetAddress:  target,
+		TemplateFolder: conf.TemplateFolder,
+		DockerName:     conf.DockerName,
+		TargetHash:     targetHash,
+		OutputDir:      conf.LocalTmpDir,
+		Config:         conf,
+		targetType:     targetType,
 	}
+}
+
+func stringToHash(target string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(target)))
+}
+
+func (s *ScannerModule) getOutputFileName() string {
+	return s.TargetHash + ".json"
+}
+
+func (s *ScannerModule) getOutputFilePath() string {
+	return filepath.Join(s.OutputDir, s.getOutputFileName())
+}
+
+func (s *ScannerModule) getDastFileName() string {
+	return s.TargetHash + "_dast.json"
+}
+
+func (s *ScannerModule) getDastFilePath() string {
+	return filepath.Join(s.OutputDir, s.getDastFileName())
+}
+
+func (s *ScannerModule) getWebScanFileName() string {
+	return s.TargetHash + "_web.json"
+}
+
+func (s *ScannerModule) getWebScanFilePath() string {
+	return filepath.Join(s.OutputDir, s.getWebScanFileName())
+}
+
+func (s *ScannerModule) getTargetsFileName() string {
+	return s.TargetHash + "_targets.text"
+}
+
+func (s *ScannerModule) getTargetsFilePath() string {
+	return filepath.Join(s.OutputDir, s.getTargetsFileName())
+}
+
+func (s *ScannerModule) getTempStateFileName() string {
+	return s.TargetHash + "_temp.json"
+}
+
+func (s *ScannerModule) getTempStateFilePath() string {
+	return filepath.Join(s.OutputDir, s.getTempStateFileName())
 }
 
 func (s *ScannerModule) UpdateScanStatus(status enums.ScanStatus) {
@@ -82,12 +107,7 @@ func (s *ScannerModule) UpdateScanStatus(status enums.ScanStatus) {
 		s.Logger.Error("Error Marshal Status", err)
 	}
 
-	fileCreateErr := os.MkdirAll(filepath.Dir(s.TempStateFile), 0666)
-	if fileCreateErr != nil {
-		s.Logger.Error("Error creating directory:", err)
-	}
-
-	tempStateFile, err := os.OpenFile(s.TempStateFile, os.O_WRONLY|os.O_CREATE, 0666)
+	tempStateFile, err := os.OpenFile(s.getTempStateFilePath(), os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		s.Logger.Error("Error Opening TempStateFile", err)
 	}
@@ -102,13 +122,13 @@ func (s *ScannerModule) UpdateScanStatus(status enums.ScanStatus) {
 
 func (s *ScannerModule) GetScanStatus() enums.ScanStatus {
 
-	_, err := os.Stat(s.TempStateFile)
+	_, err := os.Stat(s.getTempStateFilePath())
 	if os.IsNotExist(err) {
 		s.Logger.Error("TempStateFile Does Not Exists", err)
 		return enums.ScanStatusDoesNotExist
 	}
 
-	outfile, err := os.OpenFile(s.TempStateFile, os.O_RDONLY, 0)
+	outfile, err := os.OpenFile(s.getTempStateFilePath(), os.O_RDONLY, 0)
 	if err != nil {
 		s.Logger.Error("Error Opening TempStateFile", err)
 		return enums.ScanStatusDoesNotExist
@@ -199,6 +219,7 @@ func getNanoCPUForContainer() int64 {
 	return int64(halfCPU) * 1e9
 }
 
+// runPortScanner runs the port scanner before the web scan
 func (s *ScannerModule) runPortScanner(ctx context.Context) error {
 	ipCount, _ := iputils.GetIPCountIfRange(s.TargetAddress)
 	portScanTimeout := 60 * time.Second
@@ -209,7 +230,7 @@ func (s *ScannerModule) runPortScanner(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, portScanTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "naabu", "-host", s.TargetAddress, "-rate", "100", "-silent", "-o", s.TargetsFile)
+	cmd := exec.CommandContext(ctx, "naabu", "-host", s.TargetAddress, "-rate", "100", "-silent", "-o", s.getTargetsFilePath())
 
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
@@ -229,6 +250,209 @@ func (s *ScannerModule) runPortScanner(ctx context.Context) error {
 
 }
 
+// runCrawler runs the crawler before the web scan
+func (s *ScannerModule) runCrawler(ctx context.Context) error {
+	katanatime := 60 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, katanatime)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "katana", "-silent", "-kf", "all", "-jsl", "-aff", "-ct", "119", "-c", "10", "-d", "5", "-jsonl", "-u", s.TargetAddress, "-o", s.getTargetsFilePath())
+
+	var stdOut bytes.Buffer
+	var stdErr bytes.Buffer
+	cmd.Stdout = &stdOut
+	cmd.Stderr = &stdErr
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Error in Katana: %w", err)
+	}
+
+	if stdOut.String() == "" {
+		return fmt.Errorf("No URL found by Katana")
+	}
+
+	return nil
+
+}
+
+// getContainerResources returns the resources for the container
+func getContainerResources() (*container.Resources, error) {
+	containerRAM, err := getRAMForContainer()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting RAM for container: %w", err)
+	}
+	containerCPU := getNanoCPUForContainer()
+
+	resources := &container.Resources{
+		Memory:   containerRAM,
+		NanoCPUs: containerCPU,
+	}
+
+	return resources, nil
+}
+
+// getContainerHostConfig returns the host configuration for the container
+func (s *ScannerModule) getContainerHostConfig() (*container.HostConfig, error) {
+	ctrResource, err := getContainerResources()
+	if err != nil {
+		s.Logger.Error("Error getting container resources", err)
+		return nil, err
+	}
+
+	ctrVolumes := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: s.TemplateFolder,
+			Target: "/root/nuclei-templates",
+		},
+		{
+			Type:   mount.TypeBind,
+			Source: s.OutputDir,
+			Target: "/nucout/",
+		},
+	}
+
+	hostConfig := &container.HostConfig{
+		NetworkMode: "host",
+		Mounts:      ctrVolumes,
+		Resources:   *ctrResource,
+		AutoRemove:  true, // Remove the container after it exits
+	}
+	return hostConfig, nil
+}
+
+// StartDASTScan runs the DAST scan
+func (s *ScannerModule) StartDASTScan(ctx context.Context, dockerClient *client.Client) error {
+	config := &container.Config{
+		Image: s.Config.DockerName,
+		Cmd: []string{
+			"-im", "jsonl",
+			"-l", "/nucout/" + s.getTargetsFileName(),
+			"-o", "/nucout/" + s.getDastFileName(),
+			"-j",
+			"-dast",
+		},
+	}
+
+	containerName := "scan-dast-" + s.TargetHash
+	err := s.runScanCtr(ctx, dockerClient, config, containerName)
+	if err != nil {
+		return fmt.Errorf("Error running container: %w", err)
+	}
+
+	return nil
+}
+
+// StartWebScan runs the web scan
+// 1. Run the crawler
+// 2. If the crawler fails, skips the DAST scan
+// 3. If the crawler is successful, run the DAST scan
+// 4. Run the normal scan
+// 5. Merge the results of the DAST and normal scan
+func (s *ScannerModule) StartWebScan(ctx context.Context, dockerClient *client.Client) error {
+	// if the target is a URL, run the crawler
+	err := s.runCrawler(ctx)
+	if err != nil {
+		// if the crawler fails, run the nuclei scan with the target address
+		s.Logger.Error("Error running crawler", err)
+	} else {
+		// if the crawler is successful, run the nuclei scan with the crawled URLs
+		err = s.StartDASTScan(ctx, dockerClient)
+		if err != nil {
+			return err
+		}
+	}
+
+	config := &container.Config{
+		Image: s.Config.DockerName,
+		Cmd:   []string{"-l", "/nucout/" + s.getTargetsFileName(), "-o", "/nucout/" + s.getOutputFileName(), "-j"},
+	}
+	// Run normal scan
+	config.Cmd = []string{
+		"-u", s.TargetAddress,
+		"-o", "/nucout/" + s.getWebScanFileName(),
+		"-j",
+	}
+
+	containerName := "scan-" + s.TargetHash
+	err = s.runScanCtr(ctx, dockerClient, config, containerName)
+	if err != nil {
+		return fmt.Errorf("Error running container: %w", err)
+	}
+
+	if err = s.mergeWebResults(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ScannerModule) mergeWebResults() error {
+
+	dst, err := os.OpenFile(s.getOutputFilePath(), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("Error opening final output file: %w", err)
+	}
+	defer dst.Close()
+
+	// Open the first file for reading if it exists
+	dastSrc, err := os.Open(s.getDastFilePath())
+	if os.IsNotExist(err) {
+		s.Logger.Info("Dast Scan output does not exist, skipping")
+	} else if err != nil {
+		return fmt.Errorf("Error opening first file: %w", err)
+	} else {
+		defer dastSrc.Close()
+		// Copy the content from the first file to the merged file
+		if _, err := io.Copy(dst, dastSrc); err != nil {
+			return fmt.Errorf("Error copying content from first file: %w", err)
+		}
+	}
+
+	// Open the second file for reading if it exists
+	normalSrc, err := os.Open(s.getWebScanFilePath())
+	if os.IsNotExist(err) {
+		s.Logger.Info("Web Scan output does not exist, skipping")
+	} else if err != nil {
+		return fmt.Errorf("Error opening second file: %w", err)
+	} else {
+		defer normalSrc.Close()
+		// Copy the content from the second file to the merged file
+		if _, err := io.Copy(dst, normalSrc); err != nil {
+			return fmt.Errorf("Error copying content from second file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// StartNetworkScan runs the network scan
+func (s *ScannerModule) StartNetworkScan(ctx context.Context, dockerClient *client.Client) error {
+	ctrCmd := []string{"-l", "/nucout/" + s.getTargetsFileName(), "-o", "/nucout/" + s.getOutputFileName(), "-j"}
+	err := s.runPortScanner(ctx)
+	if err != nil {
+		// If port scan file does not exist, run the nuclei scan with the target address
+		s.Logger.Error("Error running port scanner", err)
+		ctrCmd = []string{"-u", s.TargetAddress, "-o", "/nucout/" + s.getOutputFileName(), "-j"}
+	}
+
+	// Default input is the port scan file
+	config := &container.Config{
+		Image: s.Config.DockerName,
+		Cmd:   ctrCmd,
+	}
+
+	containerName := "scan-" + s.TargetHash
+	err = s.runScanCtr(ctx, dockerClient, config, containerName)
+	if err != nil {
+		return fmt.Errorf("Error running container: %w", err)
+	}
+
+	return nil
+
+}
+
 func (s *ScannerModule) StartScan() {
 	scanCompleted := false
 	defer func() {
@@ -237,6 +461,7 @@ func (s *ScannerModule) StartScan() {
 			s.UpdateScanStatus(enums.ScanStatusCouldNotCompleted)
 		}
 	}()
+
 	os.Setenv("n_scaninput", s.TargetAddress)
 	os.Setenv("n_scanstatus", "RUNNING")
 	s.UpdateScanStatus(enums.ScanStatusStarted)
@@ -248,74 +473,54 @@ func (s *ScannerModule) StartScan() {
 		return
 	}
 
-	containerRAM, err := getRAMForContainer()
-	if err != nil {
-		s.Logger.Error("Error getting RAM for container", err)
+	switch s.targetType {
+	case enums.TargetTypeIPRange, enums.TargetTypeIP:
+		err = s.StartNetworkScan(ctx, dockerClient)
+		if err != nil {
+			s.Logger.Error("Error Starting Network Scan", err)
+			return
+		}
+	case enums.TargetTypeURL:
+		err = s.StartWebScan(ctx, dockerClient)
+		if err != nil {
+			s.Logger.Error("Error Starting Web Scan", err)
+			return
+		}
+	default:
+		s.Logger.Error("Invalid target type", nil)
 		return
 	}
-	containerCPU := getNanoCPUForContainer()
-	nInputType := "file"
-	if strings.Contains(s.TargetAddress, "https://") || strings.Contains(s.TargetAddress, "http://") {
-		nInputType = "argument"
-	}
 
-	if nInputType == "file" {
-		err := s.runPortScanner(ctx)
-		if err != nil {
-			s.Logger.Error("Error running port scanner", err)
-			nInputType = "argument"
-		}
-	}
+	os.Setenv("n_scanstatus", "NONE")
 
-	config := &container.Config{
-		Image: s.Config.DockerName,
-		Cmd:   []string{"-l", "/nucout/" + s.TargetsFileName, "-o", "/nucout/" + s.OutputFileName, "-j"},
-	}
+	// Update scan status
+	scanCompleted = true
+	s.UpdateScanStatus(enums.ScanStatusCompleted)
 
-	if nInputType == "argument" {
-		config.Cmd = []string{"-u", s.TargetAddress, "-o", "/nucout/" + s.OutputFileName, "-j"}
-	}
+}
 
-	hostConfig := &container.HostConfig{
-		NetworkMode: "host",
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: s.TemplateFolder,
-				Target: "/root/nuclei-templates",
-			},
-			{
-				Type:   mount.TypeBind,
-				Source: s.OutputDir,
-				Target: "/nucout/",
-			},
-		},
-		Resources: container.Resources{
-			Memory:   containerRAM,
-			NanoCPUs: containerCPU,
-		},
-	}
+func (s ScannerModule) runScanCtr(ctx context.Context, dockerClient *client.Client, config *container.Config, containerName string) error {
 
-	containerName := "scan-" + s.FileNameHash
+	hostConfig, err := s.getContainerHostConfig()
+	if err != nil {
+		return fmt.Errorf("Error getting container host config: %w", err)
+	}
 
 	resp, err := dockerClient.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
 	if err != nil {
-		s.Logger.Error("Error Creating Docker Container", err)
-		return
+		return fmt.Errorf("Error Creating Docker Container: %w", err)
 	}
 
 	containerID := resp.ID
 
 	err = dockerClient.ContainerStart(ctx, containerID, container.StartOptions{})
 	if err != nil {
-		s.Logger.Error("Error Starting Docker Container", err)
-		return
+		return fmt.Errorf("Error Starting Docker Container: %w", err)
 	}
 
 	_, err = dockerClient.ContainerInspect(ctx, containerID)
 	if err != nil {
-		s.Logger.Error("Error During Docker Container Inspects", err)
-		return
+		return fmt.Errorf("Error During Docker Container Inspects: %w", err)
 	}
 
 	scanWaitTime := s.CalculateScanTimeout()
@@ -341,19 +546,15 @@ func (s *ScannerModule) StartScan() {
 		time.Sleep(10 * time.Second)
 	}
 
-	os.Setenv("n_scanstatus", "NONE")
 	// Remove the container if not clean exit
 	if !cleanExit {
 		if err := dockerClient.ContainerRemove(context.Background(), containerID, container.RemoveOptions{Force: true}); err != nil {
 			s.Logger.Error("Error removing container", err)
 		}
-		return
+		return fmt.Errorf("The container did not exit cleanly")
 	}
 
-	// Update scan status
-	scanCompleted = true
-	s.UpdateScanStatus(enums.ScanStatusCompleted)
-
+	return nil
 }
 
 // RetrieveResults Function
@@ -395,7 +596,7 @@ type ScanResult struct {
 func (s ScannerModule) ReturnScanResults() map[string]any {
 
 	parser := NewAlertsParser()
-	alerts := parser.Parse(s.OutputFile, s.Logger)
+	alerts := parser.Parse(s.getOutputFilePath(), s.Logger)
 
 	results := make(map[string]any)
 	results["success"] = true

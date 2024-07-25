@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/CSPF-Founder/shieldsup/scanner/config"
@@ -70,6 +71,12 @@ func (s *ScannerModule) UpdateScanStatus(status enums.TargetStatus) bool {
 }
 
 func (s *ScannerModule) CalculateScanTimeout() error {
+	if strings.Contains(s.Target.TargetAddress, "https://") || strings.Contains(s.Target.TargetAddress, "http://") {
+		// if it is a URL, then 60 minutes
+		s.totalWaitTime = time.Duration(60) * time.Minute
+		return nil
+	}
+
 	ipCount := utils.GetIPCountIfRange(s.Target.TargetAddress)
 
 	if ipCount > 256 {
@@ -83,6 +90,7 @@ func (s *ScannerModule) CalculateScanTimeout() error {
 		// Result poll interval is 1 minute
 		s.resultCheckInterval = time.Minute
 	}
+
 	return nil
 }
 

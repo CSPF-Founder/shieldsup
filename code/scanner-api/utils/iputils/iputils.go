@@ -1,9 +1,12 @@
 package iputils
 
 import (
+	"errors"
 	"math"
+	"math/big"
 	"net"
 	"regexp"
+	"strings"
 )
 
 func GetIPCountIfRange(cidr string) (int, error) {
@@ -32,4 +35,46 @@ func IsValidCIDRByRegex(cidrStr string) bool {
 	// Use the regexp.MatchString function to check if the input matches the pattern
 	match, _ := regexp.MatchString(pattern, cidrStr)
 	return match
+}
+
+func ConvertIPRangeToIPSize(ipRange string) (*big.Int, error) {
+	if ipRange == "" {
+		return nil, nil
+	}
+
+	ipRange = strings.TrimSpace(ipRange)
+
+	if strings.Contains(ipRange, "-") {
+		return nil, errors.New("Invalid Target")
+	}
+
+	if strings.Contains(ipRange, "/") {
+
+		totalIPs, err := countCIDR(ipRange)
+		if err != nil {
+			return nil, err
+		}
+
+		return totalIPs, nil
+	}
+
+	return nil, nil
+}
+
+// CIDRRangeSize calculates the total number of IP addresses in a CIDR range.
+func countCIDR(cidr string) (*big.Int, error) {
+	var totalIPs *big.Int
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return totalIPs, err
+	}
+
+	// Get the number of bits in the mask
+	ones, bits := ipNet.Mask.Size()
+
+	// Calculate the number of possible IPs
+	// The formula is 2^(bits - ones)
+	totalIPs = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(bits-ones)), nil)
+
+	return totalIPs, nil
 }

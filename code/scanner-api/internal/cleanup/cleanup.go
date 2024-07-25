@@ -52,6 +52,11 @@ func CleanupAll(log *logger.Logger, config *config.Config) (bool, error) {
 		}
 	}
 
+	return resetTheTempDir(log, config)
+}
+
+// resetTheTempDir clears the temporary directory used by the scanner
+func resetTheTempDir(log *logger.Logger, config *config.Config) (bool, error) {
 	if _, err := os.Stat(config.LocalTmpDir); err == nil {
 		if err := os.RemoveAll(config.LocalTmpDir); err != nil {
 			log.Error("Error removing logs directory", err)
