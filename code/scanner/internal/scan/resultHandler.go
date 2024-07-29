@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
 
 	"github.com/CSPF-Founder/shieldsup/scanner/enums"
 	"github.com/CSPF-Founder/shieldsup/scanner/internal/repositories"
@@ -111,14 +112,20 @@ func parseRecord(input schemas.InputRecord, target models.Target) (*models.ScanR
 	// }
 
 	record.Severity = enums.SeverityInfo // Default to Info
+
 	if input.Info.Severity != "" {
-		severity := enums.SeverityFromString(input.Info.Severity)
-		severityText, err := enums.SeverityMap.GetText(severity)
-		if err != nil {
-			return nil, errors.New("Error converting entry to record: invalid 'severity' field")
+		if strings.ToLower(input.Info.Severity) == "unknown" {
+			record.Severity = enums.SeverityMedium
+			record.SeverityText = "Medium"
+		} else {
+			severity := enums.SeverityFromString(input.Info.Severity)
+			severityText, err := enums.SeverityMap.GetText(severity)
+			if err != nil {
+				return nil, errors.New("Error converting entry to record: invalid 'severity' field")
+			}
+			record.Severity = severity
+			record.SeverityText = severityText
 		}
-		record.Severity = severity
-		record.SeverityText = severityText
 	}
 
 	record.Template = input.Template

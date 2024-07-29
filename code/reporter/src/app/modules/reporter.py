@@ -265,13 +265,18 @@ class Reporter(object):
                 return
 
             description = alert.get("vulnerability_description")
+            # if not description:
+            #     return
             if not description:
-                return
+                description = ""
 
-            description = description.strip("\n")
+            # description = description.strip("\n")
             severity = alert["severity"]
-
             severity_text = alert["severity_text"]
+
+            if severity == "unknown":
+                severity = SeverityIndex.ENUM.MEDIUM
+                severity_text = "Medium"
 
             remediation = alert.get("remediation")
             reference = alert.get("reference")
@@ -309,11 +314,14 @@ class Reporter(object):
             evidence = alert.get("evidence", "")
 
             if evidence:
+                if description:
+                    description += "\n\n"
                 evidence = evidence.strip("\n")
-                description += "\n\n" + "Evidence: \n" + evidence
+                description +=  "Evidence: \n" + evidence
 
             if matched_at:
-                description += "\n\n"
+                if description:
+                    description += "\n\n"
                 description += "Evidence found at: \n" + matched_at
 
             if description:
