@@ -19,9 +19,9 @@ import (
 	"github.com/CSPF-Founder/shieldsup/scanner-api/logger"
 	"github.com/CSPF-Founder/shieldsup/scanner-api/utils/iputils"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/client"
 )
 
 type ScannerModule struct {
@@ -467,7 +467,7 @@ func (s *ScannerModule) StartScan() {
 	s.UpdateScanStatus(enums.ScanStatusStarted)
 
 	ctx := context.Background()
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
+	dockerClient, err := client.New(client.FromEnv)
 	if err != nil {
 		s.Logger.Error("Error Initiating Docker", err)
 		return
@@ -506,19 +506,23 @@ func (s ScannerModule) runScanCtr(ctx context.Context, dockerClient *client.Clie
 		return fmt.Errorf("Error getting container host config: %w", err)
 	}
 
-	resp, err := dockerClient.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
+	resp, err := dockerClient.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:     config,
+		HostConfig: hostConfig,
+		Name:       containerName,
+	})
 	if err != nil {
 		return fmt.Errorf("Error Creating Docker Container: %w", err)
 	}
 
 	containerID := resp.ID
 
-	err = dockerClient.ContainerStart(ctx, containerID, container.StartOptions{})
+	_, err = dockerClient.ContainerStart(ctx, containerID, client.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("Error Starting Docker Container: %w", err)
 	}
 
-	_, err = dockerClient.ContainerInspect(ctx, containerID)
+	_, err = dockerClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("Error During Docker Container Inspects: %w", err)
 	}
@@ -531,14 +535,14 @@ func (s ScannerModule) runScanCtr(ctx context.Context, dockerClient *client.Clie
 
 	for time.Now().Before(tEnd) {
 		// Get the target container
-		targetContainer, err := dockerClient.ContainerInspect(context.Background(), containerID)
+		inspect, err := dockerClient.ContainerInspect(context.Background(), containerID, client.ContainerInspectOptions{})
 		if err != nil {
 			s.Logger.Error("Error getting container", err)
 			cleanExit = true
 			break
 		}
 
-		if targetContainer.State.Status == "exited" {
+		if inspect.Container.State.Status == container.StateExited {
 			cleanExit = true
 			break
 		}
@@ -548,7 +552,7 @@ func (s ScannerModule) runScanCtr(ctx context.Context, dockerClient *client.Clie
 
 	// Remove the container if not clean exit
 	if !cleanExit {
-		if err := dockerClient.ContainerRemove(context.Background(), containerID, container.RemoveOptions{Force: true}); err != nil {
+		if _, err := dockerClient.ContainerRemove(context.Background(), containerID, client.ContainerRemoveOptions{Force: true}); err != nil {
 			s.Logger.Error("Error removing container", err)
 		}
 		return fmt.Errorf("The container did not exit cleanly")

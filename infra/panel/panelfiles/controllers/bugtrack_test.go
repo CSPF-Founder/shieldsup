@@ -19,16 +19,16 @@ func (ctx *testContext) mockGetOverviewListByUser(bug models.BugTrack) {
 	bugRow := sqlmock.NewRows([]string{"id", "target", "alert_title", "found_at", "status"}).
 		AddRow(bug.ID, bug.Target, bug.AlertTitle, bug.FoundDate, bug.Status)
 
-	ctx.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `bugtrack_entries` WHERE user_id = ? ORDER BY `bugtrack_entries`.`id` LIMIT 1")).
-		WithArgs(bug.UserID).
+	ctx.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `bugtrack_entries` WHERE user_id = ? ORDER BY `bugtrack_entries`.`id` LIMIT ?")).
+		WithArgs(bug.UserID, 1).
 		WillReturnRows(bugRow)
 }
 
 func (ctx *testContext) mockEmptyGetOverviewListByUser(bug models.BugTrack) {
 	bugTrackRow := sqlmock.NewRows([]string{"id", "target", "alert_title", "found_at", "status"})
 
-	ctx.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `bugtrack_entries` WHERE user_id = ? ORDER BY `bugtrack_entries`.`id` LIMIT 1")).
-		WithArgs(bug.ID).
+	ctx.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `bugtrack_entries` WHERE user_id = ? ORDER BY `bugtrack_entries`.`id` LIMIT ?")).
+		WithArgs(bug.ID, 1).
 		WillReturnRows(bugTrackRow)
 }
 

@@ -9,9 +9,7 @@ import (
 	"github.com/CSPF-Founder/shieldsup/scanner-api/config"
 	"github.com/CSPF-Founder/shieldsup/scanner-api/logger"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 func CleanupAll(log *logger.Logger, config *config.Config) (bool, error) {
@@ -22,29 +20,29 @@ func CleanupAll(log *logger.Logger, config *config.Config) (bool, error) {
 
 	dockerName := config.DockerName
 
-	cli, err := client.NewClientWithOpts()
+	cli, err := client.New()
 	if err != nil {
 		log.Error("Error initializing docker client API", err)
 		return false, err
 	}
 
-	stopList, err := cli.ContainerList(context.Background(), container.ListOptions{
+	stopList, err := cli.ContainerList(context.Background(), client.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(filters.Arg("ancestor", dockerName)),
+		Filters: make(client.Filters).Add("ancestor", dockerName),
 	})
 	if err != nil {
 		log.Error("Error getting docker containers", err)
 		return false, err
 	}
 
-	for _, dockContainer := range stopList {
+	for _, dockContainer := range stopList.Items {
 		if dockContainer.ID != "" {
-			err := cli.ContainerStop(context.Background(), dockContainer.ID, container.StopOptions{})
+			_, err := cli.ContainerStop(context.Background(), dockContainer.ID, client.ContainerStopOptions{})
 			if err != nil {
 				log.Error("Error stopping docker container", err)
 				return false, err
 			}
-			err = cli.ContainerRemove(context.Background(), dockContainer.ID, container.RemoveOptions{Force: true})
+			_, err = cli.ContainerRemove(context.Background(), dockContainer.ID, client.ContainerRemoveOptions{Force: true})
 			if err != nil {
 				log.Error("Error removing docker container", err)
 				return false, err

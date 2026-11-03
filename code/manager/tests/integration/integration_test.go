@@ -4,68 +4,59 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// var testDB *sql.DB
-
 func TestMain(m *testing.M) {
-	// Create a new Docker pool
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		log.Fatalf("Could not construct pool: %s", err)
-	}
+	os.Exit(run(m))
+}
 
-	// Uses pool to try to connect to Docker
-	err = pool.Client.Ping()
-	if err != nil {
-		log.Fatalf("Could not connect to Docker: %s", err)
-	}
+// run is split from TestMain so deferred cleanup executes before os.Exit.
+func run(m *testing.M) int {
+	ctx := context.Background()
 
-	// Start a MongoDB container
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "mongo",
-		Tag:        "latest",
-	})
+	pool, err := dockertest.NewPool(ctx, "")
 	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
+		log.Printf("Could not construct pool: %s", err)
+		return 1
 	}
 	defer func() {
-		if err := pool.Purge(resource); err != nil {
-			log.Fatalf("Could not purge resource: %s", err)
+		if err := pool.Close(ctx); err != nil {
+			log.Printf("Could not close pool: %s", err)
 		}
 	}()
 
-	// MongoDB connection string
-	dbURI := fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
+	resource, err := pool.Run(ctx, "mongo", dockertest.WithoutReuse())
+	if err != nil {
+		log.Printf("Could not start resource: %s", err)
+		return 1
+	}
 
-	if err := pool.Retry(func() error {
-		client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(dbURI))
+	dbURI := fmt.Sprintf("mongodb://%s", resource.GetHostPort("27017/tcp"))
+
+	if err := pool.Retry(ctx, time.Minute, func() error {
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(dbURI))
 		if err != nil {
 			return err
 		}
 
-		// Ping the MongoDB server
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
-		err = client.Ping(ctx, nil)
-		if err != nil {
+		if err := client.Ping(pingCtx, nil); err != nil {
 			return err
 		}
 
-		return client.Disconnect(ctx)
+		return client.Disconnect(pingCtx)
 	}); err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
-		return
+		log.Printf("Could not connect to MongoDB: %s", err)
+		return 1
 	}
 
-	// You can't defer this because os.Exit doesn't care for defer
-	if err := pool.Purge(resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
-	}
+	return m.Run()
 }

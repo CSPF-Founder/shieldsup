@@ -28,7 +28,7 @@ sudo chown -R vagrant:vagrant /app/shieldsup/
 #Install Golang
 cd ~
 sleep 5
-wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz
-sudo rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && tar -C /usr/local -xzf go1.27.3.linux-amd64.tar.gz
 sudo echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
 source /etc/profile
